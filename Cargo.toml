@@ -1,0 +1,26 @@
+[package]
+name = "unildd"
+version = "0.1.0"
+edition = "2021"
+authors = ["nix-enthusiast"]
+license = "BSD-3"
+
+[dependencies]
+# Object parsing library
+goblin = { version = "0.8.2"}
+
+# For creating static HashMaps
+phf = { version = "0.11.2", features = ["macros"] }
+
+# Coloring
+owo-colors = "4.1.0"
+
+# For old Windows CMD
+anstream = "0.6.15"
+
+[lib]
+name = "unildd"
+crate-type = ["cdylib", "staticlib"]
+
+[profile.release]
+strip = true
