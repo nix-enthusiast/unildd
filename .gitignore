@@ -1,5 +1,6 @@
 /target
 Cargo.lock
+.idea
 
 # This part is taken from GitHub's macOS gitignore template
 # General
