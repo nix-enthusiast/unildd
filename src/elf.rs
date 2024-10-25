@@ -2,10 +2,12 @@ use std::ptr::null_mut;
 
 use crate::{
     debug::debug_objects,
-    structs::{CharVec, ParsingError, StringPtr, ULDDObj, ULDDObjResult},
+    structs::{CharVec, ParsingError, ULDDObj, ULDDObjResult},
     types::{ElfFileType, ElfOS, E_MACHINE, E_TYPE},
 };
 use goblin::elf::Elf;
+use crate::debug::option_to_c_string;
+use crate::impls::StringToCString;
 
 fn find_os_from_strtab_elf(elf: &Elf<'_>, pat: &[&str]) -> bool {
     [
@@ -59,7 +61,7 @@ fn find_os_elf(elf: &Elf<'_>, os_abi: u8) -> (ElfOS, *mut i8) {
         }
     };
 
-    (os, StringPtr::from(os.to_string()).0)
+    (os, os.to_c_string())
 }
 
 fn find_linux_vdso(e_machine: u16, bit_type: bool) -> Option<&'static str> {
@@ -105,21 +107,21 @@ pub(crate) fn parse_elf(
     debugging: bool,
 ) -> ULDDObjResult {
     let mut elf = elf;
-    let cpu_type = StringPtr::from(E_MACHINE.get(&elf.header.e_machine)).0;
+    let cpu_type = option_to_c_string(E_MACHINE.get(&elf.header.e_machine));
     let file_type = match E_TYPE.get(&elf.header.e_type) {
         _ if elf.header.e_type == 0x03 && elf.interpreter.is_some() => {
-            StringPtr::from(ElfFileType::Executable.to_string()).0
+            ElfFileType::Executable.to_c_string()
         }
-        rest => StringPtr::from(rest).0,
+        rest => option_to_c_string(rest),
     };
-    let interpreter = StringPtr::from(elf.interpreter).0;
+    let interpreter = option_to_c_string(elf.interpreter);
     debug_objects(file_name, member_names, "an ELF binary", debugging);
     ULDDObjResult {
         error: ParsingError::default(),
         obj: ULDDObj {
-            file_name: StringPtr::from(file_name).0,
+            file_name: file_name.to_c_string(),
             member_name: CharVec::from(member_names),
-            executable_format: StringPtr::from("ELF").0,
+            executable_format: "ELF".to_c_string(),
             is_64: elf.is_64,
             os_type: find_os_elf(&elf, os_abi).1,
             file_type,

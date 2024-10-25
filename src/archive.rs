@@ -1,9 +1,10 @@
 use crate::{
-    debug::{debug_objects, find_error_type, merge_members},
+    debug::{debug_objects, merge_members},
     parse_objects,
-    structs::{CharVec, Debugging, ParsingError, StringPtr, ULDDObj, ULDDObjResult},
+    structs::{CharVec, Debugging, ParsingError, ULDDObj, ULDDObjResult},
 };
 use goblin::archive::Archive;
+use crate::impls::{ErrorToInt, StringToCString};
 
 pub(crate) fn parse_archive<'a>(
     file_name: &'a str,
@@ -25,13 +26,13 @@ pub(crate) fn parse_archive<'a>(
                     error)).print(debugging);
                 return objects.push(ULDDObjResult {
                     error: ParsingError {
-                        code: find_error_type(&error),
-                        explanation: StringPtr::from(error.to_string()).0,
+                        code: error.to_int(),
+                        explanation: error.to_c_string(),
                     },
                     obj: ULDDObj {
-                        file_name: StringPtr::from(file_name).0,
+                        file_name: file_name.to_c_string(),
                         member_name: CharVec::from(member_names),
-                        file_type: StringPtr::from("Archive").0,
+                        file_type: "Archive".to_c_string(),
                         ..Default::default()
                     },
                 });

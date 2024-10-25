@@ -37,7 +37,7 @@ Basically:
   `cp header/unildd.h /my/amazing/project/`  
 
 ### License
-This library is licensed with [BSD-3 Clause License](https://choosealicense.com/licenses/bsd-3-clause/) 
+This library is licensed under [BSD-3 Clause License](https://choosealicense.com/licenses/bsd-3-clause/) 
 
 The resources used to make this library are cited as comments in the respective source files which they were used.
 

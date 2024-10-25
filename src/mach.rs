@@ -1,6 +1,6 @@
 use crate::{
-    debug::{debug_objects, find_error_type, merge_members},
-    structs::{CharVec, Debugging, ParsingError, StringPtr, ULDDObj, ULDDObjResult},
+    debug::{debug_objects, merge_members},
+    structs::{CharVec, Debugging, ParsingError, ULDDObj, ULDDObjResult},
     types::{
         MachOCpuType, MachOOs, MACH_O_ARM_CPU_SUBTYPE, MACH_O_CPUTYPE, MACH_O_FILE_TYPE,
         MACH_O_X86_CPU_SUBTYPE,
@@ -8,6 +8,8 @@ use crate::{
 };
 use goblin::mach::{load_command::CommandVariant::BuildVersion, Mach, MachO};
 use std::ptr::null_mut;
+use crate::debug::option_to_c_string;
+use crate::impls::{ErrorToInt, StringToCString};
 
 fn find_os_mach(mach: &MachO<'_>) -> *mut i8 {
     for lc in &mach.load_commands {
@@ -27,7 +29,7 @@ fn find_os_mach(mach: &MachO<'_>) -> *mut i8 {
                 0x0C => MachOOs::AppleVisionProSimulator,
                 _ => return null_mut(),
             };
-            return StringPtr::from(os.to_string()).0;
+            return os.to_c_string();
         }
     }
 
@@ -100,13 +102,13 @@ pub(crate) fn parse_mach<'a>(
 
                     return objects.push(ULDDObjResult {
                         error: ParsingError {
-                            code: find_error_type(&error),
-                            explanation: StringPtr::from(error.to_string()).0,
+                            code: error.to_int(),
+                            explanation: error.to_c_string(),
                         },
                         obj: ULDDObj {
-                            file_name: StringPtr::from(file_name).0,
+                            file_name: file_name.to_c_string(),
                             member_name: CharVec::from(member_names),
-                            executable_format: StringPtr::from("Mach-O").0,
+                            executable_format: "Mach-O".to_c_string(),
                             ..Default::default()
                         },
                     });
@@ -129,13 +131,13 @@ pub(crate) fn parse_mach<'a>(
                             error)).print(debugging);
                         objects.push(ULDDObjResult {
                             error: ParsingError {
-                                code: find_error_type(&error),
-                                explanation: StringPtr::from(error.to_string()).0,
+                                code: error.to_int(),
+                                explanation: error.to_c_string(),
                             },
                             obj: ULDDObj {
-                                file_name: StringPtr::from(file_name).0,
+                                file_name: file_name.to_c_string(),
                                 member_name: CharVec::from(member_names.clone()),
-                                executable_format: StringPtr::from("Mach-O").0,
+                                executable_format: "Mach-O".to_c_string(),
                                 ..Default::default()
                             },
                         })
@@ -156,22 +158,22 @@ fn parse_mach_o(
     debugging: bool,
 ) -> ULDDObjResult {
     let mut mach_o = mach_o;
-    let file_type = StringPtr::from(MACH_O_FILE_TYPE.get(&mach_o.header.filetype)).0;
+    let file_type = option_to_c_string(MACH_O_FILE_TYPE.get(&mach_o.header.filetype));
     let (cpu_type, cpu_subtype) = {
         if let Some(mach_o_cpu_type) = MACH_O_CPUTYPE.get(&mach_o.header.cputype) {
             let mach_o_cpu_subtype = {
                 match mach_o_cpu_type {
                     MachOCpuType::ARM | MachOCpuType::ARM64 => {
-                        StringPtr::from(MACH_O_ARM_CPU_SUBTYPE.get(&mach_o.header.cpusubtype)).0
+                        option_to_c_string(MACH_O_ARM_CPU_SUBTYPE.get(&mach_o.header.cpusubtype))
                     }
                     MachOCpuType::X86 | MachOCpuType::X86_64 => {
-                        StringPtr::from(MACH_O_X86_CPU_SUBTYPE.get(&mach_o.header.cpusubtype)).0
+                        option_to_c_string(MACH_O_X86_CPU_SUBTYPE.get(&mach_o.header.cpusubtype))
                     }
                     _ => null_mut(),
                 }
             };
             (
-                StringPtr::from(mach_o_cpu_type.to_string()).0,
+                mach_o_cpu_type.to_c_string(),
                 mach_o_cpu_subtype,
             )
         } else {
@@ -190,9 +192,9 @@ fn parse_mach_o(
     ULDDObjResult {
         error: ParsingError::default(),
         obj: ULDDObj {
-            file_name: StringPtr::from(file_name).0,
+            file_name: file_name.to_c_string(),
             member_name: CharVec::from(member_names),
-            executable_format: StringPtr::from("Mach-O").0,
+            executable_format: "Mach-O".to_c_string(),
             is_64: mach_o.is_64,
             os_type: find_os_mach(&mach_o),
             file_type,

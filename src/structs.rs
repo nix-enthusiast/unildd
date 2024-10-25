@@ -100,9 +100,6 @@ pub struct ULDDObjResultVec {
 }
 
 #[doc(hidden)]
-pub struct StringPtr(pub *mut i8);
-
-#[doc(hidden)]
 pub(crate) enum Debugging {
     Info(String),
     Affirmative(String),

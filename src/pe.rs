@@ -1,10 +1,12 @@
 use crate::{
     debug::debug_objects,
-    structs::{CharVec, ParsingError, StringPtr, ULDDObj, ULDDObjResult},
+    structs::{CharVec, ParsingError, ULDDObj, ULDDObjResult},
     types::{PeOS, PeSubsystem, PE_ARCH, PE_SUBSYSTEM},
 };
 use goblin::pe::{characteristic::IMAGE_FILE_DEBUG_STRIPPED, PE};
 use std::ptr::null_mut;
+use crate::debug::option_to_c_string;
+use crate::impls::StringToCString;
 
 fn find_os_pe(pe: &PE<'_>) -> *mut i8 {
     let Some(optional_header) = pe
@@ -32,7 +34,7 @@ fn find_os_pe(pe: &PE<'_>) -> *mut i8 {
         PeSubsystem::Unknown => return null_mut(),
     };
 
-    StringPtr::from(os.to_string()).0
+    os.to_c_string()
 }
 
 pub(crate) fn parse_pe(
@@ -43,7 +45,7 @@ pub(crate) fn parse_pe(
 ) -> ULDDObjResult {
     let is_stripped = pe.header.coff_header.characteristics & IMAGE_FILE_DEBUG_STRIPPED
         == IMAGE_FILE_DEBUG_STRIPPED;
-    let cpu_type = StringPtr::from(PE_ARCH.get(&pe.header.coff_header.machine)).0;
+    let cpu_type = option_to_c_string(PE_ARCH.get(&pe.header.coff_header.machine));
     let file_type = pe
         .header
         .optional_header
@@ -57,27 +59,27 @@ pub(crate) fn parse_pe(
                 .windows_fields
                 .minor_operating_system_version;
             let linker_version = format!("{}.{}", linker_major_version, linker_minor_version);
-            StringPtr::from(linker_version).0
+            linker_version.to_c_string()
         } else {
             null_mut()
         }
     };
     let executable_format = if pe.is_64 {
         debug_objects(file_name, member_names, "a PE32+ binary", debugging);
-        StringPtr::from("PE32+").0
+        "PE32+".to_c_string()
     } else {
         debug_objects(file_name, member_names, "a PE32 binary", debugging);
-        StringPtr::from("PE32").0
+        "PE32".to_c_string()
     };
     ULDDObjResult {
         error: ParsingError::default(),
         obj: ULDDObj {
-            file_name: StringPtr::from(file_name).0,
+            file_name: file_name.to_c_string(),
             member_name: CharVec::from(member_names),
             executable_format,
             is_64: pe.is_64,
             os_type: find_os_pe(&pe),
-            file_type: StringPtr::from(file_type).0,
+            file_type: option_to_c_string(file_type),
             is_stripped,
             cpu_type,
             cpu_subtype: null_mut(),

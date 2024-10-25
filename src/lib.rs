@@ -30,7 +30,7 @@
 //!
 use archive::parse_archive;
 use coff::parse_coff;
-use debug::{find_error_type, merge_members};
+use debug::merge_members;
 use elf::parse_elf;
 use goblin::Object;
 use mach::parse_mach;
@@ -38,8 +38,10 @@ use owo_colors::OwoColorize;
 use pe::parse_pe;
 use std::ffi::{c_char, CStr, CString};
 use structs::{
-    CharVec, Debugging, ParsingError, StringPtr, ULDDObj, ULDDObjResult, ULDDObjResultVec,
+    CharVec, Debugging, ParsingError, ULDDObj, ULDDObjResult, ULDDObjResultVec,
 };
+use crate::impls::{ErrorToInt, StringToCString};
+
 #[doc(hidden)]
 pub mod archive;
 #[doc(hidden)]
@@ -101,10 +103,10 @@ fn parse_objects<'a>(
             objects.push(ULDDObjResult {
                 error: ParsingError {
                     code: magic_number as i64,
-                    explanation: StringPtr::from(msg).0,
+                    explanation: msg.to_c_string(),
                 },
                 obj: ULDDObj {
-                    file_name: StringPtr::from(file_name).0,
+                    file_name: file_name.to_c_string(),
                     member_name: CharVec::from(member_names),
                     ..Default::default()
                 },
@@ -128,10 +130,10 @@ fn parse_objects<'a>(
             objects.push(ULDDObjResult {
                 error: ParsingError {
                     code: -7,
-                    explanation: StringPtr::from(msg).0,
+                    explanation: msg.to_c_string(),
                 },
                 obj: ULDDObj {
-                    file_name: StringPtr::from(file_name).0,
+                    file_name: file_name.to_c_string(),
                     member_name: CharVec::from(member_names),
                     ..Default::default()
                 },
@@ -149,11 +151,11 @@ fn parse_objects<'a>(
 
             objects.push(ULDDObjResult {
                 error: ParsingError {
-                    code: find_error_type(&error),
-                    explanation: StringPtr::from(error.to_string()).0,
+                    code: error.to_int(),
+                    explanation: error.to_c_string(),
                 },
                 obj: ULDDObj {
-                    file_name: StringPtr::from(file_name).0,
+                    file_name: file_name.to_c_string(),
                     member_name: CharVec::from(member_names),
                     ..Default::default()
                 },
@@ -225,7 +227,7 @@ unsafe fn drop_c_string(ptr: *mut i8) {
 ///
 /// # Safety
 ///
-/// This function is designed for deallocating [`ULDDObjResultVec`] created by rust. Trying to deallocating [`ULDDObjResultVec`] created by other languages may result with errors.
+/// This function is designed for deallocating [`ULDDObjResultVec`] created by rust. Trying to deallocate [`ULDDObjResultVec`] created by other languages may result with errors.
 ///
 /// It is null pointer-safe.
 ///

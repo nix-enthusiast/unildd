@@ -1,10 +1,23 @@
 use crate::{
-    structs::{CharVec, Debugging, ParsingError, StringPtr, ULDDObj},
+    structs::{CharVec, Debugging, ParsingError, ULDDObj},
     ULDDObjResult, ULDDObjResultVec,
 };
 use anstream::{eprintln as a_eprintln, println as a_println};
 use owo_colors::OwoColorize;
-use std::{fmt::Display, mem::ManuallyDrop, ptr::null_mut, ffi::{c_char, CString}};
+use std::{
+    ffi::{c_char, CString},
+    fmt::Display,
+    mem::ManuallyDrop,
+    ptr::null_mut,
+};
+
+pub trait StringToCString {
+    fn to_c_string(self) -> *mut c_char;
+}
+
+pub trait ErrorToInt {
+    fn to_int(&self) -> i64;
+}
 
 impl From<Vec<*mut c_char>> for CharVec {
     fn from(value: Vec<*mut c_char>) -> Self {
@@ -52,7 +65,7 @@ impl From<Vec<&str>> for CharVec {
                 CString::from_vec_unchecked(item.to_string().into_bytes()).into_raw()
             })
             .collect();
-        
+
         CharVec::from(vector)
     }
 }
@@ -65,14 +78,17 @@ impl From<&mut Vec<&str>> for CharVec {
                 CString::from_vec_unchecked(item.to_string().into_bytes()).into_raw()
             })
             .collect();
-        
+
         CharVec::from(vector)
     }
 }
 
-impl From<String> for StringPtr {
-    fn from(value: String) -> Self {
-        let mut value = value;
+impl<T> StringToCString for T
+where
+    T: Display,
+{
+    fn to_c_string(self) -> *mut c_char {
+        let mut value = self.to_string();
         value.push('\0');
         let c_string = match CString::from_vec_with_nul(value.into_bytes()) {
             Ok(string) => string,
@@ -81,25 +97,20 @@ impl From<String> for StringPtr {
                 panic!("{}", error)
             }
         };
-        StringPtr(c_string.into_raw())
+        c_string.into_raw()
     }
 }
 
-impl From<&str> for StringPtr {
-    fn from(value: &str) -> Self {
-        StringPtr::from(value.to_owned())
-    }
-}
-
-impl<T> From<Option<T>> for StringPtr
-where
-    T: Display,
-{
-    fn from(value: Option<T>) -> Self {
-        let Some(t) = value else {
-            return StringPtr(null_mut());
-        };
-        StringPtr::from(t.to_string())
+impl ErrorToInt for goblin::error::Error {
+    fn to_int(&self) -> i64 {
+        match self {
+            goblin::error::Error::Malformed(_) => -1,
+            goblin::error::Error::BadMagic(_) => -2,
+            goblin::error::Error::Scroll(_) => -3,
+            goblin::error::Error::BufferTooShort(_, _) => -4,
+            goblin::error::Error::IO(_) => -5,
+            _ => -6,
+        }
     }
 }
 

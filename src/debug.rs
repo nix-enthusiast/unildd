@@ -1,16 +1,11 @@
-use goblin::error::Error as ObjectError;
-
+use std::ffi::c_char;
+use std::fmt::Display;
+use std::ptr::null_mut;
+use crate::impls::StringToCString;
 use crate::structs::Debugging;
 
-pub(crate) fn find_error_type(error: &ObjectError) -> i64 {
-    match error {
-        ObjectError::Malformed(_) => -1,
-        ObjectError::BadMagic(_) => -2,
-        ObjectError::Scroll(_) => -3,
-        ObjectError::BufferTooShort(_, _) => -4,
-        ObjectError::IO(_) => -5,
-        _ => -6,
-    }
+pub(crate) fn option_to_c_string<T>(option: Option<T>) -> *mut c_char where T: Display  {
+    option.map(|v| v.to_c_string()).unwrap_or(null_mut())
 }
 
 pub(crate) fn merge_members(member_names: &mut [&str]) -> String {
