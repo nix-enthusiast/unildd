@@ -1,3 +1,4 @@
+use std::ffi::c_char;
 use std::ptr::null_mut;
 
 use crate::{
@@ -20,7 +21,7 @@ fn find_os_from_strtab_elf(elf: &Elf<'_>, pat: &[&str]) -> bool {
     .any(|s| pat.iter().any(|i| s.to_lowercase().contains(i)))
 }
 
-fn find_os_elf(elf: &Elf<'_>, os_abi: u8) -> (ElfOS, *mut i8) {
+fn find_os_elf(elf: &Elf<'_>, os_abi: u8) -> (ElfOS, *mut c_char) {
     let os = {
         match os_abi {
             0x00 => match true {

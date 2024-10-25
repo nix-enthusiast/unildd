@@ -1,3 +1,4 @@
+use std::ffi::c_char;
 use crate::{
     debug::{debug_objects, merge_members},
     structs::{CharVec, Debugging, ParsingError, ULDDObj, ULDDObjResult},
@@ -11,7 +12,7 @@ use std::ptr::null_mut;
 use crate::debug::option_to_c_string;
 use crate::impls::{ErrorToInt, StringToCString};
 
-fn find_os_mach(mach: &MachO<'_>) -> *mut i8 {
+fn find_os_mach(mach: &MachO<'_>) -> *mut c_char {
     for lc in &mach.load_commands {
         if let BuildVersion(build_version) = lc.command {
             let os = match build_version.platform {

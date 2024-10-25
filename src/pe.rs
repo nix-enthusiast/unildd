@@ -1,3 +1,4 @@
+use std::ffi::c_char;
 use crate::{
     debug::debug_objects,
     structs::{CharVec, ParsingError, ULDDObj, ULDDObjResult},
@@ -8,7 +9,7 @@ use std::ptr::null_mut;
 use crate::debug::option_to_c_string;
 use crate::impls::StringToCString;
 
-fn find_os_pe(pe: &PE<'_>) -> *mut i8 {
+fn find_os_pe(pe: &PE<'_>) -> *mut c_char {
     let Some(optional_header) = pe
         .header
         .optional_header
