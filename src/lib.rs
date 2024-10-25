@@ -218,7 +218,7 @@ pub unsafe extern "C" fn read_obj(
     ULDDObjResultVec::from(objects)
 }
 
-unsafe fn drop_c_string(ptr: *mut i8) {
+unsafe fn drop_c_string(ptr: *mut c_char) {
     if !ptr.is_null() {
         let _ = CString::from_raw(ptr);
     }
