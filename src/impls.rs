@@ -15,6 +15,10 @@ pub trait StringToCString {
     fn to_c_string(self) -> *mut c_char;
 }
 
+pub trait DropCString {
+    fn drop_c_string(self);
+}
+
 pub trait ErrorToInt {
     fn to_int(&self) -> i64;
 }
@@ -83,6 +87,16 @@ impl From<&mut Vec<&str>> for CharVec {
     }
 }
 
+impl From<CharVec> for Vec<*mut c_char> {
+    fn from(value: CharVec) -> Self {
+        if value.vec.is_null() || value.length == 0 {
+            return Vec::new();
+        };
+
+        unsafe { Vec::from_raw_parts(value.vec, value.length, value.capacity) }
+    }
+}
+
 impl<T> StringToCString for T
 where
     T: Display,
@@ -98,6 +112,26 @@ where
             }
         };
         c_string.into_raw()
+    }
+}
+
+impl DropCString for *mut c_char {
+    fn drop_c_string(self) {
+        unsafe {
+            if !self.is_null() {
+                let _ = CString::from_raw(self);
+            }
+        }
+    }
+}
+
+impl DropCString for CharVec {
+    fn drop_c_string(self) {
+        let vector: Vec<*mut c_char> = self.into();
+        
+        for item in vector {
+            item.drop_c_string();
+        }
     }
 }
 

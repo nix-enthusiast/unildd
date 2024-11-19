@@ -28,6 +28,7 @@
 //!
 //! [^3]: That doesn't mean I am liable for any damages done by this project and files you parsed. Take your own risk!
 //!
+use crate::impls::{DropCString, ErrorToInt, StringToCString};
 use archive::parse_archive;
 use coff::parse_coff;
 use debug::merge_members;
@@ -36,11 +37,8 @@ use goblin::Object;
 use mach::parse_mach;
 use owo_colors::OwoColorize;
 use pe::parse_pe;
-use std::ffi::{c_char, CStr, CString};
-use structs::{
-    CharVec, Debugging, ParsingError, ULDDObj, ULDDObjResult, ULDDObjResultVec,
-};
-use crate::impls::{ErrorToInt, StringToCString};
+use std::ffi::{c_char, CStr};
+use structs::{CharVec, Debugging, ParsingError, ULDDObj, ULDDObjResult, ULDDObjResultVec};
 
 #[doc(hidden)]
 pub mod archive;
@@ -218,12 +216,6 @@ pub unsafe extern "C" fn read_obj(
     ULDDObjResultVec::from(objects)
 }
 
-unsafe fn drop_c_string(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        let _ = CString::from_raw(ptr);
-    }
-}
-
 ///
 /// # Safety
 ///
@@ -250,31 +242,18 @@ pub unsafe extern "C" fn free_obj(obj: ULDDObjResultVec, debugging: bool) -> u8 
         Debugging::Info(format!("{}. object is being deallocated", index + 1)).print(debugging);
 
         let o = object.obj;
-        drop_c_string(object.error.explanation);
-        drop_c_string(o.file_name);
-        drop_c_string(o.executable_format);
-        drop_c_string(o.os_type);
-        drop_c_string(o.file_type);
-        drop_c_string(o.cpu_type);
-        drop_c_string(o.cpu_subtype);
-        drop_c_string(o.interpreter);
-        if !o.member_name.vec.is_null() {
-            let member_names = Vec::from_raw_parts(
-                o.member_name.vec,
-                o.member_name.length,
-                o.member_name.capacity,
-            );
-            for name in member_names {
-                drop_c_string(name)
-            }
-        };
-        if !o.libraries.vec.is_null() {
-            let libraries =
-                Vec::from_raw_parts(o.libraries.vec, o.libraries.length, o.libraries.capacity);
-            for library in libraries {
-                drop_c_string(library)
-            }
-        };
+        
+        object.error.explanation.drop_c_string();
+        o.file_name.drop_c_string();
+        o.executable_format.drop_c_string();
+        o.os_type.drop_c_string();
+        o.file_type.drop_c_string();
+        o.cpu_type.drop_c_string();
+        o.cpu_subtype.drop_c_string();
+        o.interpreter.drop_c_string();
+        o.member_name.drop_c_string();
+        o.libraries.drop_c_string();
+
         Debugging::Affirmative(format!("{}. object is deallocated", index + 1)).print(debugging);
     }
 
